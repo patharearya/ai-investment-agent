@@ -1,0 +1,1 @@
+Five AI agents research stocks for a beginner, then argue against every pick before it survives. Every exit condition cites an article it read or a number it measured, and when nothing holds up, it recommends nothing and says why. Research, not advice: github.com/patharearya/ai-investment-agent

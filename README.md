@@ -1,3 +1,6 @@
+[![AI Investment Research Agent in 20 seconds: click to play](brag-output/brag.jpg)](https://patharearya.github.io/ai-investment-agent/brag.mp4)
+*Click the picture to watch the 20-second video.*
+
 # AI Investment Research Agent
 
 [![tests](https://github.com/patharearya/ai-investment-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/patharearya/ai-investment-agent/actions/workflows/tests.yml)

@@ -46,3 +46,8 @@ desktop.ini
 # Saved runs (NOT re-fetchable - a paused session lives here, so unlike
 # .cache/ above, deleting this loses a user's in-progress work)
 .state/
+
+# Launch-video build scratch: the installed ffmpeg, UI captures, rendered
+# frames and audio stems. All rebuilt by brag-output/scripts/; only the plan,
+# scripts, brag.mp4, brag.jpg and share copy are committed.
+brag-output/work/

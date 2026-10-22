@@ -1,0 +1,188 @@
+<!doctype html>
+<!-- The launch video. Every frame is render(t): a pure function of time, so
+     build.py can seek to any frame and capture it. Colours and fonts are the
+     site's own (frontend/static/index.html :root); the UI images are the real
+     app captured by capture_ui.py. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500&display=block">
+<style>
+  :root {
+    --bg: #101423; --deep: #0a0d18; --ink: #e8ecf8; --muted: #98a1b8;
+    --cream: #f2f6ff; --accent: #4d8dff; --accent-hot: #27d9f0;
+    --grad: linear-gradient(100deg, #4d8dff 0%, #27d9f0 52%, #a97bff 100%);
+    --display: "Cormorant Garamond", Georgia, serif;
+    --mono: "JetBrains Mono", Consolas, monospace;
+  }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0 / 64px 64px,
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0 / 64px 64px,
+      var(--bg); }
+  #glow { position: absolute; width: 1400px; height: 1400px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(77,141,255,.16), rgba(169,123,255,.06) 45%, transparent 70%); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .center { position: absolute; left: 0; right: 0; text-align: center; }
+  .w { display: inline-block; white-space: pre; }
+  .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  #s1 .l1 { top: 380px; font: 300 100px/1.1 var(--display); color: var(--cream); }
+  #s1 .l2 { top: 520px; font: italic 300 110px/1.15 var(--display); padding-bottom: 20px; }
+
+  .title { mix-blend-mode: lighten; }   /* drops the h1 capture's darker backing rectangle */
+  #s2 .title { position: absolute; left: 510px; top: 150px; width: 900px; }
+  #s2 .step { position: absolute; top: 380px; width: 300px; border-radius: 14px; }
+
+  #s3 .viewport { position: absolute; left: 410px; top: 0; width: 1100px; height: 870px; overflow: hidden;
+    -webkit-mask-image: linear-gradient(transparent 0, #000 60px, #000 780px, transparent 870px); }
+  #s3 .card { position: absolute; left: 0; width: 1100px; border-radius: 14px; }
+  #s3 .dim { position: absolute; left: 0; width: 1100px; background: rgba(10,13,24,.6); }
+  #s3 svg { position: absolute; left: 0; overflow: visible; }
+  #s3 .cap { top: 900px; font: italic 300 72px/1.2 var(--display); padding-bottom: 12px; }
+
+  #s4 .cap { top: 200px; font: 300 76px/1.2 var(--display); color: var(--cream); }
+  #s4 .card { position: absolute; left: 410px; top: 380px; width: 1100px; border-radius: 14px; }
+
+  #s5 .title { position: absolute; left: 360px; top: 340px; width: 1200px; }
+  #s5 .tag { top: 540px; font: italic 300 60px/1.2 var(--display); color: var(--muted); }
+  #s5 .url { top: 660px; font: 500 32px/1 var(--mono); letter-spacing: -.01em; }
+</style></head>
+<body><div id="stage">
+  <div id="glow"></div>
+
+  <section class="scene" id="s1">
+    <div class="center l1"></div>
+    <div class="center l2 grad-words"></div>
+  </section>
+
+  <section class="scene" id="s2">
+    <img class="title" src="../work/ui/title.png">
+    <img class="step" src="../work/ui/step1.png">
+    <img class="step" src="../work/ui/step2.png">
+    <img class="step" src="../work/ui/step3.png">
+    <img class="step" src="../work/ui/step4.png">
+    <img class="step" src="../work/ui/step5.png">
+  </section>
+
+  <section class="scene" id="s3">
+    <div class="viewport">
+      <img class="card" src="../work/ui/card.png">
+      <div class="dim"></div><div class="dim"></div>
+      <svg width="1100" height="120"><defs><linearGradient id="g" x1="0" x2="1">
+        <stop offset="0" stop-color="#4d8dff"/><stop offset=".52" stop-color="#27d9f0"/><stop offset="1" stop-color="#a97bff"/>
+      </linearGradient></defs><rect id="box" fill="none" stroke="url(#g)" stroke-width="4" rx="12"/></svg>
+    </div>
+    <div class="center cap grad">Every claim cites what it read.</div>
+  </section>
+
+  <section class="scene" id="s4">
+    <div class="center cap"></div>
+    <img class="card" src="../work/ui/nothing.png">
+  </section>
+
+  <section class="scene" id="s5">
+    <img class="title" src="../work/ui/title.png">
+    <div class="center tag">Research, not advice.</div>
+    <div class="center url grad">github.com/patharearya/ai-investment-agent</div>
+  </section>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);           // ease-out cubic
+const inout = x => { x = clamp(x); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; };
+const ramp = (t, a, b) => clamp((t - a) / (b - a));
+// Scene opacity: in over [a, a+fi], out over [b-fo, b]. Scenes never overlap,
+// so a cut dips through the background instead of double-exposing.
+const life = (t, a, b, fi = .35, fo = .3) => Math.min(ease((t - a) / fi), 1 - ease((t - (b - fo)) / fo));
+
+function words(el, text) {
+  el.innerHTML = text.split(" ").map(w => `<span class="w">${w} </span>`).join("");
+  return [...el.children];
+}
+const l1 = words($("#s1 .l1"), "Five AI agents research stocks for you.");
+const l2 = words($("#s1 .l2"), "Then they argue against every pick.");
+l2.forEach(w => w.classList.add("grad"));
+const c4 = words($("#s4 .cap"), "And when nothing holds up, it says so.");
+
+function stagger(ws, t, start, step = .08, dur = .45) {
+  ws.forEach((w, i) => {
+    const p = ease((t - start - i * step) / dur);
+    w.style.opacity = p;
+    w.style.transform = `translateY(${(1 - p) * 28}px)`;
+    w.style.filter = `blur(${(1 - p) * 8}px)`;
+  });
+}
+
+const CARD = { w: 1100, scale: 1100 / 1472 };            // card.png is 2x of a 736px-wide panel
+const BOX = { x: 40, y: 790, w: 1390, h: 150 };            // first condition + its Check: line, in card.png pixels
+
+function render(t) {
+  // Ambient glow drifts slowly the whole time; continuity across scene cuts.
+  $("#glow").style.transform = `translate(${300 + 500 * Math.sin(t * .22)}px, ${-300 + 160 * Math.cos(t * .17)}px)`;
+
+  // 1. Hook
+  const s1 = $("#s1"); s1.style.opacity = life(t, 0, 4.0, .01);
+  stagger(l1, t, .2);
+  stagger(l2, t, 1.45);
+
+  // 2. Reveal: real title, then the real five step tiles; Critique lifts.
+  const s2 = $("#s2"); s2.style.opacity = life(t, 4.0, 8.0, .2);
+  const ti = ease((t - 4.1) / .6);
+  $("#s2 .title").style.transform = `translateY(${(1 - ti) * -30}px)`;
+  $("#s2 .title").style.opacity = ti;
+  const lift = inout((t - 6.0) / .45);
+  document.querySelectorAll("#s2 .step").forEach((el, i) => {
+    const p = ease((t - 4.5 - i * .2) / .55);
+    const hero = i === 3;
+    el.style.left = (162 + i * 324) + "px";
+    el.style.opacity = p * (hero ? 1 : 1 - .5 * lift);
+    el.style.transform = `translateY(${(1 - p) * 60 - (hero ? 30 * lift : 0)}px) scale(${hero ? 1 + .1 * lift : 1})`;
+    el.style.boxShadow = hero ? `0 0 ${60 * lift}px rgba(39,217,240,${.45 * lift})` : "none";
+  });
+
+  // 3. A real brief pans down to its exit conditions; the citation gets boxed.
+  const s3 = $("#s3"); s3.style.opacity = life(t, 8.0, 12.8);
+  const pan = inout((t - 8.7) / 1.3);
+  const top = 140 + pan * (-150 - 140);
+  $("#s3 .card").style.top = top + "px";
+  const k = CARD.scale, bx = BOX.x * k, by = top + BOX.y * k, bw = BOX.w * k, bh = BOX.h * k;
+  const dimP = ease((t - 10.0) / .5) * .9;
+  const [d1, d2] = document.querySelectorAll("#s3 .dim");
+  d1.style.top = top + "px"; d1.style.height = (BOX.y * k) + "px"; d1.style.opacity = dimP;
+  d2.style.top = (by + bh) + "px"; d2.style.height = "1200px"; d2.style.opacity = dimP;
+  const svg = $("#s3 svg"); svg.style.top = (by - 10) + "px";
+  const box = $("#box");
+  box.setAttribute("x", bx - 10); box.setAttribute("y", 0);
+  box.setAttribute("width", bw + 20); box.setAttribute("height", bh + 20);
+  const per = 2 * (bw + bh + 40);
+  box.setAttribute("stroke-dasharray", per);
+  box.setAttribute("stroke-dashoffset", per * (1 - inout((t - 10.0) / .7)));
+  const cap = ease((t - 9.3) / .5);
+  $("#s3 .cap").style.opacity = cap;
+  $("#s3 .cap").style.transform = `translateY(${(1 - cap) * 24}px)`;
+
+  // 4. Nothing is a real answer.
+  const s4 = $("#s4"); s4.style.opacity = life(t, 12.8, 16.6, .2);
+  stagger(c4, t, 12.9);
+  const n = ease((t - 13.4) / .7);
+  $("#s4 .card").style.opacity = n;
+  $("#s4 .card").style.transform = `translateY(${(1 - n) * 70}px)`;
+
+  // 5. Outro
+  const s5 = $("#s5"); s5.style.opacity = life(t, 16.6, 20.0, .2, .01);
+  const o = ease((t - 16.75) / .7);
+  $("#s5 .title").style.opacity = o;
+  $("#s5 .title").style.transform = `scale(${.94 + .06 * o})`;
+  const tg = ease((t - 17.3) / .5);
+  $("#s5 .tag").style.opacity = tg;
+  $("#s5 .tag").style.transform = `translateY(${(1 - tg) * 20}px)`;
+  const u = ease((t - 17.7) / .5);
+  $("#s5 .url").style.opacity = u;
+  $("#s5 .url").style.transform = `translateY(${(1 - u) * 20}px)`;
+}
+window.render = render;
+window.ready = Promise.all([document.fonts.ready,
+  ...[...document.images].map(i => i.decode())]);
+render(0);
+</script></body></html>
