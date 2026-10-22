@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "radial-spotlight-glow",
+        "value": "*",
+        "files": [
+          "brag-output/scripts/composition.html"
+        ],
+        "createdAt": "2026-10-22T23:44:58.194Z",
+        "reason": "Claude decided: the launch video reproduces the product's own page background, which uses the same accent radial glows (frontend/static/index.html lines 90-92)"
+      }
+    ]
+  }
+}

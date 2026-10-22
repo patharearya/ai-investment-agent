@@ -51,3 +51,6 @@ desktop.ini
 # frames and audio stems. All rebuilt by brag-output/scripts/; only the plan,
 # scripts, brag.mp4, brag.jpg and share copy are committed.
 brag-output/work/
+
+# Design-check hook cache (machine-local); config.json beside it is committed.
+.impeccable/hook.cache.json
