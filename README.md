@@ -15,6 +15,32 @@ than a blank screen.
 Every claim must cite a retrieved article or a measured number, and anything
 grounded in neither is discarded and counted.
 
+## Try it
+
+### **[ai-investment-agent-gdjr.onrender.com](https://ai-investment-agent-gdjr.onrender.com)**
+
+Nothing to install and no account or API key. The site has three tabs:
+
+- **Run it** — answer eight questions (age, experience, risk, amount, currency,
+  how long, which sectors, anything to avoid) and the five agents run live. Each
+  stage appears as it finishes rather than behind a spinner, and a run takes two
+  to four minutes. If two of your answers contradict each other it stops and
+  asks. You can close the tab: the run carries on and will be waiting when you
+  come back.
+- **Past runs** — eleven recorded runs across ten sectors, including one that
+  recommended nothing. Free to read, and they work even when the day's live runs
+  are used up.
+- **About** — what it does, what it deliberately will not do, and its limits.
+
+Two things to know before you start:
+
+- **It runs on free tiers.** That is roughly seven live runs a day, shared by
+  everyone who visits; the page shows an estimate of what is left. The host
+  also sleeps when idle, so the first visit after a quiet spell can take up to a
+  minute to load.
+- **Narrower researches better.** "Grid storage" produces a sharper brief than
+  "utilities".
+
 > **Not investment advice.** A personal learning project, not licensed or
 > qualified to advise anyone. Its output should not be acted on.
 
@@ -25,7 +51,7 @@ MIT licensed — see [LICENSE](LICENSE).
 ## What it produces
 
 Each recommendation gives a thesis, the conditions that would break it and what
-grounds each one, then what to do next. From `python -m backend.cli --demo`:
+grounds each one, then what to do next. From a recorded run:
 
 ```
      What would mean the idea has stopped working
@@ -52,12 +78,46 @@ or says how much to put anywhere, because nothing in the pipeline models any of
 those. Prices in another currency are converted at the day's rate and the count
 is floored, so it never says you can afford a share you cannot.
 
+### What to expect
+
+**It may recommend nothing, and that is a real answer.** The pipeline is never
+forced to produce a pick. It shows the reason instead of a blank screen.
+
+**Sector choice matters more than it looks.** Semiconductors are covered densely
+enough to produce a full brief. Renewable energy is dominated by private and
+foreign firms, so it can legitimately come back with nothing — the system
+working, not breaking.
+
+**Results vary between runs.** It reads the last two weeks of news, so the same
+answers on a different day find different companies.
+
 ---
 
-## How to use this
+## How it works
 
-Five steps. The first two need no API key, so you can see what this produces
-and run the whole test suite before deciding whether to sign up for anything.
+Five agents on a LangGraph state machine — validate, research, screen, critique,
+write — with a few rules holding it together:
+
+- **LLMs judge; Python computes.** Every score, screen and ranking is
+  deterministic code. A model asked to score a company 0–100 returns 72 with
+  nothing behind it.
+- **The model never writes a ticker.** It extracts company *names*; tickers come
+  from a market database and are verified. A guessed symbol doesn't look wrong —
+  it silently returns a different company's financials.
+- **Search first, then synthesise.** Agent 2 retrieves real articles and asks
+  the model to read them, rather than asking what matters and hunting for
+  support afterwards.
+- **What gets filtered out is reported.** "No risks found" means something
+  different when four of twelve articles never reached the model.
+
+**[`docs/DESIGN.md`](docs/DESIGN.md)** has the full reasoning and the honest
+list of what still goes wrong.
+
+---
+
+## Run it yourself
+
+Only needed to work on the code — the website above runs the same pipeline.
 
 ### 1. Install
 
@@ -83,38 +143,19 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. See it work — no API key needed
+### 2. Check it works — no API key needed
 
 ```
-python -m backend.cli --demo
+python -m pytest                                  # 1093 passed, 1 skipped, ~20s, no network
+python -m backend.cli --demo                      # prints a recorded run
+python -m uvicorn frontend.app:app --port 8000    # the website, locally
 ```
 
-Prints a real recorded run — same renderer, same models, same grounded exit
-conditions, no network call and nothing to sign up for. The fastest way to see
-what the project produces.
+The local site's Past runs tab works without a key. Run it with ONE worker: the
+queue that stops two runs writing to the checkpoint file at once lives in a
+single process.
 
-Or in a browser, which also needs no key to look around:
-
-```
-python -m uvicorn frontend.app:app --port 8000
-```
-
-The page asks the same questions the CLI does, streams each stage as it lands
-rather than showing a spinner for three minutes, pauses to ask if two of your
-answers contradict each other, and lists **recorded runs** you can read without
-spending anything. Run it with ONE worker: the queue that stops two runs writing
-to the checkpoint file at once lives in a single process.
-
-```
-python -m pytest
-```
-
-**1062 passed, 1 skipped** in about fifteen seconds, no network and no
-credentials. If those work, your install is good.
-
-### 3. Add an API key
-
-Only needed to run the pipeline for real.
+### 3. Add API keys
 
 ```powershell
 Copy-Item .env.example .env      # Windows
@@ -132,88 +173,46 @@ Then open `.env` and add:
 | `FMP_API_KEY` | For Agent 3 | 250 requests/day | [financialmodelingprep.com](https://site.financialmodelingprep.com) |
 | `WEB_SESSION_SECRET` | For a deployed site | — | `python -c "import secrets; print(secrets.token_hex(32))"` |
 
-Without the news key the pipeline cannot research anything, so it will not get
-far. Without the FMP key it still works — non-US companies fall back to
-`yfinance`, which needs no key at all.
-
-Check everything is wired up:
+Without the news key the pipeline cannot research anything. Without the FMP key
+it still works — non-US companies fall back to `yfinance`, which needs no key.
 
 ```
 python -m backend.scripts.check_setup
 ```
 
-It verifies `.env` exists, the settings validate, and the model actually
-responds. **Run this first whenever something breaks** — it tells you whether
-the problem is your config, the provider, or the code, before you debug the
-wrong layer.
+Verifies `.env` exists, the settings validate, and the model actually responds.
+**Run this first whenever something breaks** — it tells you whether the problem
+is your config, the provider, or the code.
 
-### 4. Run it
+### 4. Run it from the command line
 
 ```
 python -m backend.cli --profile backend/examples/semiconductors_high_risk.json
-```
-
-Or answer the nine questions yourself:
-
-```
-python -m backend.cli                             # then --save-profile mine.json to keep them
-```
-
-The sector question lists the eleven sectors the market is divided into, with a
-narrower example beside each — pick a number, or type something of your own.
-**Narrower researches better**: "grid storage" produces a sharper brief than
-"utilities".
-
-A run takes **two to three minutes** and about a dozen model calls, printing
-each stage as it lands. At roughly 25–30k of Groq's daily 200k, that is six or
-seven runs a day on the free tier.
-
-### 5. If it stops, resume it
-
-Every step is checkpointed to SQLite, so closing the terminal at a prompt — or
-Ctrl-C during the long research call — loses nothing.
-
-```
+python -m backend.cli                    # answer the questions yourself; --save-profile mine.json keeps them
 python -m backend.cli --list             # saved runs, and which can be resumed
 python -m backend.cli --resume <id>      # continue one
 ```
 
-Resuming does **not** repeat the stages that already finished, which on a
-free-tier quota is the difference between losing a minute and losing the day.
-
----
-
-### What to expect
-
-**It may recommend nothing, and that is a real answer.** The pipeline is never
-forced to produce a pick. It prints a banner with the reason instead of a blank
-screen.
-
-**Sector choice matters more than it looks.** Semiconductors are covered densely
-enough to produce a full brief. Renewable energy is dominated by private and
-foreign firms, so `backend/examples/beginner_renewables.json` can legitimately come back
-with nothing — the system working, not breaking.
-
-**Try the interrupt.** `backend/examples/conflicted_crypto.json` contains a
-contradiction. The pipeline stops mid-run, asks you to resolve it, and continues
-from exactly where it paused.
-
-**Results vary between runs.** It reads the last two weeks of news, so the same
-profile on a different day finds different companies.
+A run is about a dozen model calls, roughly 25–30k of Groq's daily 200k tokens.
+Every step is checkpointed to SQLite, so closing the terminal at a prompt — or
+Ctrl-C during the long research call — loses nothing, and resuming does not
+repeat the stages that already finished.
+`backend/examples/conflicted_crypto.json` contains a contradiction, to see the
+pipeline stop, ask, and continue from exactly where it paused.
 
 ---
 
 ## Tests and evals
 
-```powershell
-python -m pytest                        # 1062 passed, 1 skipped; no network
+```
+python -m pytest                        # 1093 passed, 1 skipped; no network
 ```
 
 The evals make **real API calls** and are how the agents were developed. Start
 with `--tag hard`; a full `decision_runner` run costs most of a free day's
 tokens.
 
-```powershell
+```
 python -m backend.evals.runner                  # Agent 1: 32 labelled cases
 python -m backend.evals.runner --tag hard --repeat 3
 python -m backend.evals.research_runner         # Agent 2
@@ -233,28 +232,6 @@ eval, never from the test suite — and the suite was green throughout. The
 sharpest case: an agent shipped with **351 passing tests and a model that was
 never called at all**, because every test stubbed the news client and the
 provider silently returned nothing for every live query.
-
----
-
-## How it works
-
-Five agents on a LangGraph state machine — profile, research, companies, risk
-critic, decide — with a few rules holding it together:
-
-- **LLMs judge; Python computes.** Every score, screen and ranking is
-  deterministic code. A model asked to score a company 0–100 returns 72 with
-  nothing behind it.
-- **The model never writes a ticker.** It extracts company *names*; tickers come
-  from a market database and are verified. A guessed symbol doesn't look wrong —
-  it silently returns a different company's financials.
-- **Search first, then synthesise.** Agent 2 retrieves real articles and asks
-  the model to read them, rather than asking what matters and hunting for
-  support afterwards.
-- **What gets filtered out is reported.** "No risks found" means something
-  different when four of twelve articles never reached the model.
-
-**[`docs/DESIGN.md`](docs/DESIGN.md)** has the full reasoning and the honest
-list of what still goes wrong.
 
 ---
 
@@ -290,6 +267,7 @@ shared/            Recorded runs, read by BOTH halves.
   recorded_run.json  What --demo prints with no API key.
   gallery/           The eleven runs the website shows.
 
+brag-output/       The launch video, its poster, and the scripts that build it.
 docs/              DESIGN.md and PROJECT_LOG.md — the whole project, both halves.
 conftest.py        Shared test fixtures, at the root so both suites see them.
 ```
@@ -302,10 +280,6 @@ keeps the dependency pointing one way — the frontend reads recordings through
 
 The split is by WHAT PRODUCES THE ANSWER rather than by what runs in a browser.
 `frontend/app.py` is server code and lives there anyway, because it belongs to
-the website rather than to the pipeline.
-
-The split is by WHAT PRODUCES THE ANSWER rather than by what runs in a browser.
-`frontend/app.py` is server code and lives there anyway, because it belongs to
 the website rather than to the pipeline - the line that matters here is which
 half a change belongs to, not which machine it executes on.
 
@@ -315,15 +289,12 @@ decisions about what a reader is told, and two copies of those drift. Content
 lives there, layout stays in each front end, and the test of the line is whether
 changing it would tell a reader something different or only move the words.
 
-```
-```
-
 ---
 
 ## Deploying it
 
-`render.yaml` is a working blueprint; `Procfile` covers hosts that read one
-instead. Two things are not preferences:
+The live site is a Render blueprint: `render.yaml`, free plan. `Procfile`
+covers hosts that read one instead. Two things are not preferences:
 
 **One worker.** The queue that stops two runs writing to the same SQLite
 checkpoint file lives in a single process. Two workers means two queues, and the
@@ -339,6 +310,10 @@ cannot be resumed after a redeploy and the runs-served ledger resets. Nothing a
 reader was given is lost — the gallery's recordings are committed files — but a
 persistent disk mounted at `.state/` is the first thing to add if it ever gets
 real traffic.
+
+The launch video is served separately, from GitHub Pages by
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml), so it plays in the
+browser instead of downloading.
 
 ---
 
@@ -378,7 +353,7 @@ names the instrument that would close it and why it was not built.
 ## The log
 
 **[`docs/PROJECT_LOG.md`](docs/PROJECT_LOG.md) is the interesting half of this
-repository.** 118 entries recording what broke, what the first diagnosis was, and
+repository.** 145 entries recording what broke, what the first diagnosis was, and
 why it was usually wrong — an operating margin of 168 that corrupted two
 verified agents, a citation rate blamed on the model that turned out to be
 plumbing, the tests-passing-model-never-called story above, and a widening fix
